@@ -1,0 +1,78 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100vw;
+  justify-content: center;
+}
+
+.content {
+  height: 75vh;
+  overflow-y: auto;
+  width: 50vw;
+}
+
+.btn {
+  padding: 14px 20px;
+  background-color: #8247e5;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-left: 20px;
+  min-width: 200px;
+  margin-bottom: 12px;
+}
+
+.done {
+  color: #41b841;
+}
+
+.pending {
+  color: #a7a7a7;
+}
+
+.doughchef {
+  color: #4984e7;
+}
+
+.toppingchef {
+  color: #e749ba;
+}
+
+.oven {
+  color: #e5782d;
+}
+
+.serving {
+  color: #8247e5;
+}
+
+.orderDiv {
+  display: flex;
+  width: 75vw;
+  justify-content: center;
+  align-items: center;
+}
+
+.inputDiv {
+  display: flex;
+  flex: 1;
+  margin-bottom: 12px;
+}
+
+.iconBtn {
+  background-color: #41b841;
+  font-size: large;
+  font-weight: bold;
+  border-radius: 50%;
+  border: none;
+  color: white;
+  margin-left: 20px;
+  width: 75px;
+  cursor: pointer;
+}
+
+.red {
+  background-color: #fe6b6b;
+}
