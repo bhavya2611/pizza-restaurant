@@ -23,7 +23,8 @@ for (let i = 1; i < 10; i++) {
 
 function App() {
   const [orders, setOrders] = useState(new Map());
-  const [newOrder, setNewOrder] = useState([0]);
+  const [newOrder, setNewOrder] = useState([1]);
+  const [updateObj, setUpdateObj] = useState({});
 
   const handleToppingsChange = (index, value) => {
     newOrder[index] = value.length;
@@ -43,10 +44,12 @@ function App() {
   useEffect(() => {
     // Fetch orders on component mount
     fetchOrders();
+  }, []);
 
+  useEffect(() => {
     // Listen for order updates from the backend
-    socket.on("orderUpdated", (orderId, status) => {
-      updateOrderStatus(orderId, status);
+    socket.on("orderUpdated", (orderId, pizzaId, status) => {
+      setUpdateObj({ orderId, pizzaId, status });
     });
 
     // Clean up on component unmount
@@ -78,121 +81,141 @@ function App() {
       });
       const data = await response.json();
       const { orderId } = data;
-      debugger;
       orders.set(orderId, data);
       setOrders(new Map(orders));
       setNewOrder([1]);
     }
   };
 
-  const updateOrderStatus = (orderId, pizzaId, status) => {
+  const updateOrderStatus = () => {
+    const { orderId, pizzaId, status } = updateObj;
     if (orders.has(orderId)) {
       const order = orders.get(orderId);
-      if (order?.pizza) {
-        order.pizzas.map((pizza) =>
+
+      if (order?.pizzas) {
+        order.pizzas = order.pizzas.map((pizza) =>
           pizza.id === pizzaId ? { ...pizza, status } : pizza
         );
       }
+
+      const orderStatus =
+        order?.pizzas.filter((pizza) => pizza.status !== "Done").length > 0
+          ? "PENDING"
+          : "DONE";
+
+      if (orderStatus === "DONE") {
+        const currentTime = new Date();
+        const createdAt = new Date(order.createdAt);
+        const diff = Math.abs(currentTime - createdAt) / 1000;
+        order.completedAt = diff;
+      }
+
       orders.set(orderId, order);
       setOrders(new Map(orders));
     }
   };
 
-  console.log(Array.from(orders.values()));
+  useEffect(() => {
+    updateOrderStatus();
+  }, [updateObj]);
 
-  if (orders.size) {
-    return (
-      <div className='layout'>
-        <h1>Pizza Restaurant Management System</h1>
-        <div className='orderDiv'>
-          <div style={{ width: "100%" }}>
-            {newOrder.map((item, index) => (
-              <div className='inputDiv'>
-                <Select
-                  size='large'
-                  placeholder='Please select a pizza'
-                  onChange={handleToppingsChange}
-                  defaultValue={[pizzaOptions[0]]}
-                  style={{
-                    width: "100%",
-                    marginRight: "20px"
-                  }}
-                  options={pizzaOptions}
-                />
-                <Select
-                  mode='multiple'
-                  size='large'
-                  placeholder='Please select toppings'
-                  onChange={(val) => handleToppingsChange(index, val)}
-                  style={{
-                    width: "100%"
-                  }}
-                  defaultValue={[toppingOptions[0]]}
-                  options={toppingOptions}
-                />
-                {index === 0 && (
-                  <button onClick={addNewPizza} className='iconBtn'>
-                    +
-                  </button>
-                )}
-                {index > 0 && (
-                  <button
-                    onClick={() => removeNewPizza(index)}
-                    className='iconBtn red'
-                  >
-                    -
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <button className='btn' onClick={createOrder}>
-            Create Order
-          </button>
+  return (
+    <div className='layout'>
+      <h1>Pizza Restaurant Management System</h1>
+      <div className='orderDiv'>
+        <div style={{ width: "100%" }}>
+          {newOrder.map((item, index) => (
+            <div className='inputDiv'>
+              <Select
+                size='large'
+                placeholder='Please select a pizza'
+                onChange={handleToppingsChange}
+                defaultValue={[pizzaOptions[0]]}
+                style={{
+                  width: "100%",
+                  marginRight: "20px"
+                }}
+                options={pizzaOptions}
+              />
+              <Select
+                mode='multiple'
+                size='large'
+                placeholder='Please select toppings'
+                onChange={(val) => handleToppingsChange(index, val)}
+                style={{
+                  width: "100%"
+                }}
+                defaultValue={[toppingOptions[0]]}
+                options={toppingOptions}
+              />
+              {index === 0 && (
+                <button onClick={addNewPizza} className='iconBtn'>
+                  +
+                </button>
+              )}
+              {index > 0 && (
+                <button
+                  onClick={() => removeNewPizza(index)}
+                  className='iconBtn red'
+                >
+                  -
+                </button>
+              )}
+            </div>
+          ))}
         </div>
-
-        <div className='content'>
-          {orders &&
-            Array.from(orders.keys()).map((key, index) => {
-              const pizzas = orders.get(key).pizzas;
-              const orderStatus =
-                pizzas.filter((pizza) => pizza.status !== "PENDING").length > 0
-                  ? "PENDING"
-                  : "DONE";
-              return (
-                <>
-                  <div>
-                    <div className='orderHeading'>
-                      <h3>
-                        Order {index} - {key} - Status -{" "}
-                        <span className={`${orderStatus.toLowerCase()}`}>
-                          {orderStatus}
-                        </span>
-                      </h3>
-                    </div>
-                    {pizzas?.map((pizza, index) => (
-                      <div className='pizzaHeading'>
-                        <h5>
-                          Pizza {index + 1} - Status -{" "}
-                          <span
-                            className={`${pizza.status
-                              .replace(" ", "")
-                              .toLowerCase()}`}
-                          >
-                            {pizza.status.toUpperCase()}
-                          </span>
-                        </h5>
-                      </div>
-                    ))}
-                  </div>
-                  <hr />
-                </>
-              );
-            })}
-        </div>
+        <button className='btn' onClick={createOrder}>
+          Create Order
+        </button>
       </div>
-    );
-  }
+
+      <div className='content'>
+        {orders &&
+          Array.from(orders.keys()).map((key, index) => {
+            const order = orders.get(key);
+            const pizzas = order.pizzas;
+            const orderStatus =
+              order?.pizzas.filter((pizza) => pizza.status !== "Done").length >
+              0
+                ? "PENDING"
+                : "DONE";
+
+            return (
+              <>
+                <div>
+                  <div className='orderHeading'>
+                    <h3>
+                      Order {index + 1} - {key} - Status -
+                      {order.completedAt && (
+                        <span> Order Time - {order.completedAt}s </span>
+                      )}
+                      <span className={`${orderStatus.toLowerCase()}`}>
+                        {orderStatus}
+                      </span>
+                    </h3>
+                  </div>
+                  {pizzas?.map((pizza, index) => (
+                    <div className='pizzaHeading'>
+                      <h5>
+                        Pizza {index + 1} - Status -{" "}
+                        <span
+                          className={`${pizza.status
+                            .replace(" ", "")
+                            .toLowerCase()}`}
+                        >
+                          {pizza.status.toUpperCase()}
+                        </span>
+                      </h5>
+                    </div>
+                  ))}
+                </div>
+                <hr />
+              </>
+            );
+          })}
+      </div>
+    </div>
+  );
 }
 
 export default App;

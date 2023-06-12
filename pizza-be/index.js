@@ -43,7 +43,9 @@ const queueProcessor = async ({
   while (true) {
     if (processingOrderList?.length < workers && currentQueue.length) {
       const pizza = currentQueue.pop();
+      pizza.status = status;
       io.emit("orderUpdated", pizza.orderId, pizza.id, status);
+
       if (status === "Topping Chef" && pizza.topping) {
         const time = (pizza.topping / 2) * 4;
         if (time) {
@@ -56,7 +58,8 @@ const queueProcessor = async ({
         if (nextQueue) {
           nextQueue.push(pizza);
         } else {
-          io.emit("orderUpdated", pizza.id, nextStage);
+          pizza.status = "Done";
+          io.emit("orderUpdated", pizza.orderId, pizza.id, "Done");
         }
       }, processTime * 1000);
     }
@@ -80,7 +83,6 @@ const createProcessors = () => {
   }
 };
 
-//
 createProcessors();
 
 // Set up WebSocket connection
